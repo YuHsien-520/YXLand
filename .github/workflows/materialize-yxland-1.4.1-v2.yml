@@ -2,8 +2,8 @@ name: Materialize YXLand 1.4.1 archive v2
 
 on:
   push:
-    paths:
-      - 'bootstrap/1.4.1/READY3'
+    branches:
+      - main
 
 permissions:
   contents: write
