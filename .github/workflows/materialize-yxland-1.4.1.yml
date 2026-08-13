@@ -15,42 +15,64 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Reconstruct verified payload
+      - name: Reconstruct verified source tree
         shell: bash
         run: |
           set -euo pipefail
-          cat bootstrap/1.4.1/part* | base64 --decode > /tmp/yxland-1.4.1-payload.tar.gz
-          echo '20a28d01fcdb981144c5eb4aceb016a0ab8373f35ff6180177d5882869ae9edd  /tmp/yxland-1.4.1-payload.tar.gz' | sha256sum -c -
-          rm -rf /tmp/yxland141 /tmp/yxland141-src
-          mkdir -p /tmp/yxland141 /tmp/yxland141-src
-          tar -xzf /tmp/yxland-1.4.1-payload.tar.gz -C /tmp/yxland141
-          (cd /tmp/yxland141 && sha256sum -c SHA256SUMS-1.4.1.txt)
-          unzip -q /tmp/yxland141/YXLand-1.4.1-source.zip -d /tmp/yxland141-src
+          cat bootstrap/1.4.1/part* | base64 --decode > /tmp/yxland-1.4.1-source-tree.tar.gz
+          echo '86bb98b57dcb69eb8ed2a086d6a4ce14aacae29c436c1bda46844aa9924b972d  /tmp/yxland-1.4.1-source-tree.tar.gz' | sha256sum -c -
+          rm -rf /tmp/YXLand-1.4.1
+          mkdir -p /tmp/YXLand-1.4.1
+          tar -xzf /tmp/yxland-1.4.1-source-tree.tar.gz -C /tmp/YXLand-1.4.1
 
+      - name: Verify and build 1.4.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/YXLand-1.4.1
+          chmod +x test.sh build.sh
+          ./test.sh
+          ./build.sh
+          javap -verbose build/classes/cn/yuxin/yxland/YXLandPlugin.class | grep 'major version: 52'
+          if jar tf dist/YXLand-1.4.1.jar | grep -Eq '^(org/bukkit/|net/md_5/)'; then
+            echo 'compile stubs leaked into plugin jar' >&2
+            exit 1
+          fi
+          cd /tmp
+          zip -qr YXLand-1.4.1-source.zip YXLand-1.4.1 \
+            -x 'YXLand-1.4.1/build/*' 'YXLand-1.4.1/dist/*'
+          sha256sum /tmp/YXLand-1.4.1/dist/YXLand-1.4.1.jar /tmp/YXLand-1.4.1-source.zip > /tmp/SHA256SUMS-1.4.1.txt
+
+      - name: Materialize repository archive
+        shell: bash
+        run: |
+          set -euo pipefail
           rm -rf versions/1.4.1 current
           mkdir -p versions/1.4.1/source current/source
-          cp /tmp/yxland141/YXLand-1.4.1.jar versions/1.4.1/
-          cp /tmp/yxland141/YXLand-1.4.1-source.zip versions/1.4.1/
-          cp /tmp/yxland141/SHA256SUMS-1.4.1.txt versions/1.4.1/SHA256SUMS.txt
-          cp /tmp/yxland141/README.md versions/1.4.1/README.md
-          cp /tmp/yxland141/TEST_REPORT.md versions/1.4.1/TEST_REPORT.md
-          cp /tmp/yxland141/CHANGELOG.md versions/1.4.1/CHANGELOG.md
-          cp -a /tmp/yxland141-src/YXLand-1.4.1/. versions/1.4.1/source/
 
-          cp /tmp/yxland141/YXLand-1.4.1.jar current/
-          cp /tmp/yxland141/YXLand-1.4.1-source.zip current/
-          cp /tmp/yxland141/SHA256SUMS-1.4.1.txt current/SHA256SUMS.txt
-          cp -a /tmp/yxland141-src/YXLand-1.4.1/. current/source/
-          cp /tmp/yxland141/README.md README.md
+          cp /tmp/YXLand-1.4.1/dist/YXLand-1.4.1.jar versions/1.4.1/
+          cp /tmp/YXLand-1.4.1-source.zip versions/1.4.1/YXLand-1.4.1-source.zip
+          cp /tmp/SHA256SUMS-1.4.1.txt versions/1.4.1/SHA256SUMS.txt
+          cp /tmp/YXLand-1.4.1/README.md versions/1.4.1/README.md
+          cp /tmp/YXLand-1.4.1/TEST_REPORT.md versions/1.4.1/TEST_REPORT.md
+          cp /tmp/YXLand-1.4.1/CHANGELOG.md versions/1.4.1/CHANGELOG.md
+          rsync -a --exclude build --exclude dist /tmp/YXLand-1.4.1/ versions/1.4.1/source/
+
+          cp /tmp/YXLand-1.4.1/dist/YXLand-1.4.1.jar current/
+          cp /tmp/YXLand-1.4.1-source.zip current/YXLand-1.4.1-source.zip
+          cp /tmp/SHA256SUMS-1.4.1.txt current/SHA256SUMS.txt
+          rsync -a --exclude build --exclude dist /tmp/YXLand-1.4.1/ current/source/
+          cp /tmp/YXLand-1.4.1/README.md README.md
 
           rm -rf bootstrap/1.4.1
+
       - name: Commit materialized archive
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'YXLand Archive Bot'
           git config user.email 'actions@users.noreply.github.com'
-          git add README.md versions/1.4.1 current bootstrap/1.4.1 || true
+          git add -A
           if git diff --cached --quiet; then
             echo 'Nothing to commit.'
           else
