@@ -19,11 +19,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat bootstrap/1.4.1/part* | base64 --decode > /tmp/yxland-1.4.1-source-tree.tar.gz
-          echo '86bb98b57dcb69eb8ed2a086d6a4ce14aacae29c436c1bda46844aa9924b972d  /tmp/yxland-1.4.1-source-tree.tar.gz' | sha256sum -c -
+          cat bootstrap/1.4.1/part* > /tmp/yxland-1.4.1-source-tree.tar.xz
+          echo '970776391e9cf94564cb5d3912f57db5931e8cbeb60094291d0b0b89685cf4c8  /tmp/yxland-1.4.1-source-tree.tar.xz' | sha256sum -c -
           rm -rf /tmp/YXLand-1.4.1
           mkdir -p /tmp/YXLand-1.4.1
-          tar -xzf /tmp/yxland-1.4.1-source-tree.tar.gz -C /tmp/YXLand-1.4.1
+          tar -xJf /tmp/yxland-1.4.1-source-tree.tar.xz -C /tmp/YXLand-1.4.1
 
       - name: Verify and build 1.4.1
         shell: bash
