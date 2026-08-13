@@ -3,7 +3,7 @@ name: Materialize YXLand 1.4.1 archive v2
 on:
   push:
     paths:
-      - 'bootstrap/1.4.1/READY2'
+      - 'bootstrap/1.4.1/READY3'
 
 permissions:
   contents: write
