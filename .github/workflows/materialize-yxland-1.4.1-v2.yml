@@ -19,7 +19,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat bootstrap/1.4.1/part*.b64 | base64 --decode > /tmp/yxland-1.4.1-source-tree.tar.xz
+          echo 'Archive parts:'
+          ls -1 bootstrap/1.4.1/part*.b64
+          cat bootstrap/1.4.1/part*.b64 | tr -cd 'A-Za-z0-9+/=' > /tmp/yxland-1.4.1-source-tree.b64
+          echo "base64_chars=$(wc -c < /tmp/yxland-1.4.1-source-tree.b64)"
+          base64 --decode /tmp/yxland-1.4.1-source-tree.b64 > /tmp/yxland-1.4.1-source-tree.tar.xz
+          sha256sum /tmp/yxland-1.4.1-source-tree.tar.xz
           echo 'c77984766db75e534bd03cc88fb656f8051091caae7b868cfbd2deca15d5b686  /tmp/yxland-1.4.1-source-tree.tar.xz' | sha256sum -c -
           rm -rf /tmp/YXLand-1.4.1
           mkdir -p /tmp/YXLand-1.4.1
