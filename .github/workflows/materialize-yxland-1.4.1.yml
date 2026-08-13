@@ -1,0 +1,59 @@
+name: Materialize YXLand 1.4.1 archive
+
+on:
+  push:
+    paths:
+      - 'bootstrap/1.4.1/READY'
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reconstruct verified payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat bootstrap/1.4.1/part* | base64 --decode > /tmp/yxland-1.4.1-payload.tar.gz
+          echo '20a28d01fcdb981144c5eb4aceb016a0ab8373f35ff6180177d5882869ae9edd  /tmp/yxland-1.4.1-payload.tar.gz' | sha256sum -c -
+          rm -rf /tmp/yxland141 /tmp/yxland141-src
+          mkdir -p /tmp/yxland141 /tmp/yxland141-src
+          tar -xzf /tmp/yxland-1.4.1-payload.tar.gz -C /tmp/yxland141
+          (cd /tmp/yxland141 && sha256sum -c SHA256SUMS-1.4.1.txt)
+          unzip -q /tmp/yxland141/YXLand-1.4.1-source.zip -d /tmp/yxland141-src
+
+          rm -rf versions/1.4.1 current
+          mkdir -p versions/1.4.1/source current/source
+          cp /tmp/yxland141/YXLand-1.4.1.jar versions/1.4.1/
+          cp /tmp/yxland141/YXLand-1.4.1-source.zip versions/1.4.1/
+          cp /tmp/yxland141/SHA256SUMS-1.4.1.txt versions/1.4.1/SHA256SUMS.txt
+          cp /tmp/yxland141/README.md versions/1.4.1/README.md
+          cp /tmp/yxland141/TEST_REPORT.md versions/1.4.1/TEST_REPORT.md
+          cp /tmp/yxland141/CHANGELOG.md versions/1.4.1/CHANGELOG.md
+          cp -a /tmp/yxland141-src/YXLand-1.4.1/. versions/1.4.1/source/
+
+          cp /tmp/yxland141/YXLand-1.4.1.jar current/
+          cp /tmp/yxland141/YXLand-1.4.1-source.zip current/
+          cp /tmp/yxland141/SHA256SUMS-1.4.1.txt current/SHA256SUMS.txt
+          cp -a /tmp/yxland141-src/YXLand-1.4.1/. current/source/
+          cp /tmp/yxland141/README.md README.md
+
+          rm -rf bootstrap/1.4.1
+      - name: Commit materialized archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'YXLand Archive Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add README.md versions/1.4.1 current bootstrap/1.4.1 || true
+          if git diff --cached --quiet; then
+            echo 'Nothing to commit.'
+          else
+            git commit -m 'release: archive YXLand 1.4.1'
+            git push
+          fi
